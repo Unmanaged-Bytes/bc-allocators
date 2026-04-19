@@ -1,0 +1,29 @@
+// SPDX-License-Identifier: MIT
+//
+// False-positive unusedFunction suppressions for bc-allocators.
+//
+// Two categories of false positives:
+//
+// 1. Public API functions only called from external consumers (bc-io,
+//    bc-containers, bc-concurrency, bc-runtime, downstream apps).
+//    cppcheck analyses bc-allocators in isolation and cannot see those.
+//
+// 2. __wrap_* functions in test files: linker-level intercept hooks activated
+//    via -Wl,--wrap=.  They are never called directly from C code; the linker
+//    replaces calls to the wrapped symbol at link time.
+
+// --- Inline / public API in bc-core not used by bc-allocators internals ---
+unusedFunction:*/bc_core_math.h
+
+// --- Linker wrap hooks in test files ---
+unusedFunction:*/test_bc_allocators_context_errors.c
+unusedFunction:*/test_bc_allocators_pool_wrap.c
+unusedFunction:*/test_bc_allocators_slab_errors.c
+unusedFunction:*tests/*_wrap.c
+unusedFunction:*/tests/*_wrap.c
+
+// --- Informational notes (not real defects) ---
+unmatchedSuppression
+missingIncludeSystem:*
+normalCheckLevelMaxBranches:*
+checkersReport
