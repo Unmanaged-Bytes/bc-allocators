@@ -22,6 +22,10 @@ unusedFunction:*/test_bc_allocators_slab_errors.c
 unusedFunction:*tests/*_wrap.c
 unusedFunction:*/tests/*_wrap.c
 
+// BC_TYPED_ARRAY_DEFINE emits a bundle of inline helpers whose subset
+// actually exercised varies by test; cppcheck flags the unused ones.
+unusedFunction:*/test_bc_allocators_typed_array.c
+
 // --- Informational notes (not real defects) ---
 unmatchedSuppression
 missingIncludeSystem:*
