@@ -1,3 +1,14 @@
+libbc-allocators (1.1.0-1) stable; urgency=medium
+
+  * feat(typed_array): add `prefix_append_bulk(mem, arr, src, count)` to
+    BC_TYPED_ARRAY_DEFINE, generating a memcpy-based bulk append method.
+    Used by bc-seek to drop a 110-line custom byte_buffer implementation.
+  * No ABI change (macro-based; all generated symbols remain static
+    inline). Consumers of existing push/reserve/clear/destroy are
+    unaffected.
+
+ -- Younes Benmoussa <younes.benmoussa@pm.me>  Tue, 21 Apr 2026 21:30:00 +0000
+
 libbc-allocators (1.0.0-1) stable; urgency=medium
 
   * Initial public release.
