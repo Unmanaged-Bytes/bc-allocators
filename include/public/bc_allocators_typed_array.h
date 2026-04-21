@@ -48,14 +48,15 @@
 /* ===== BC_TYPED_ARRAY_DEFINE(element_type, prefix) =====
  *
  * Generates:
- *   prefix_t                                     — the array struct
- *   prefix_length(arr)         → size_t          — current element count
- *   prefix_capacity(arr)       → size_t          — allocated slots
- *   prefix_data(arr)           → element_type*   — pointer to first element
- *   prefix_clear(arr)          → void            — reset length, keep capacity
- *   prefix_reserve(mem, arr, cap) → bool         — ensure capacity >= cap
- *   prefix_push(mem, arr, val) → bool            — append element (HOT PATH)
- *   prefix_destroy(mem, arr)   → void            — free data buffer
+ *   prefix_t                                           — the array struct
+ *   prefix_length(arr)                  → size_t      — current element count
+ *   prefix_capacity(arr)                → size_t      — allocated slots
+ *   prefix_data(arr)                    → element_type*
+ *   prefix_clear(arr)                   → void        — reset length, keep capacity
+ *   prefix_reserve(mem, arr, cap)       → bool        — ensure capacity >= cap
+ *   prefix_push(mem, arr, val)          → bool        — append element (HOT PATH)
+ *   prefix_append_bulk(mem, arr, src, n)→ bool        — memcpy-append n elements
+ *   prefix_destroy(mem, arr)            → void        — free data buffer
  */
 
 #define BC_TYPED_ARRAY_DEFINE(element_type, prefix)                                                                                        \
@@ -132,6 +133,30 @@
             return false;                                                                                                                  \
         }                                                                                                                                  \
         arr->data[arr->length++] = value;                                                                                                  \
+        return true;                                                                                                                       \
+    }                                                                                                                                      \
+                                                                                                                                           \
+    static inline __attribute__((unused)) bool prefix##_append_bulk(bc_allocators_context_t* mem, prefix##_t* arr,                         \
+                                                                    const element_type* src, size_t count)                                 \
+    {                                                                                                                                      \
+        if (count == 0) {                                                                                                                  \
+            return true;                                                                                                                   \
+        }                                                                                                                                  \
+        size_t required = arr->length + count;                                                                                             \
+        if (required < arr->length) {                                                                                                      \
+            return false;                                                                                                                  \
+        }                                                                                                                                  \
+        if (required > arr->capacity) {                                                                                                    \
+            size_t new_cap = arr->capacity == 0 ? 8 : arr->capacity;                                                                       \
+            while (new_cap < required) {                                                                                                   \
+                new_cap *= 2;                                                                                                              \
+            }                                                                                                                              \
+            if (!prefix##_reserve(mem, arr, new_cap)) {                                                                                    \
+                return false;                                                                                                              \
+            }                                                                                                                              \
+        }                                                                                                                                  \
+        __builtin_memcpy(arr->data + arr->length, src, count * sizeof(element_type));                                                      \
+        arr->length = required;                                                                                                            \
         return true;                                                                                                                       \
     }
 
