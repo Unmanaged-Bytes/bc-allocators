@@ -15,6 +15,16 @@
 // --- Inline / public API in bc-core not used by bc-allocators internals ---
 unusedFunction:*/bc_core_math.h
 
+// --- Public API functions in bc-allocators sources themselves ---
+// cppcheck analyses bc-allocators in isolation via compile_commands.json
+// (lib sources only, not tests), so public functions called only from
+// downstream consumers or tests appear unused.
+unusedFunction:*/src/arena/*.c
+unusedFunction:*/src/context/*.c
+unusedFunction:*/src/pool/*.c
+unusedFunction:*/src/slab/*.c
+unusedFunction:*/src/platform/*.c
+
 // --- Linker wrap hooks in test files ---
 unusedFunction:*/test_bc_allocators_context_errors.c
 unusedFunction:*/test_bc_allocators_pool_wrap.c

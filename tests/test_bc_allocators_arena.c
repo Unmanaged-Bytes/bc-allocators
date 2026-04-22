@@ -509,6 +509,100 @@ static void test_bc_allocators_arena_create_large_hugepage(void** state)
     bc_allocators_context_destroy(ctx);
 }
 
+/* ===== growable ===== */
+
+static void test_bc_allocators_arena_growable_exceeds_initial(void** state)
+{
+    (void)state;
+    bc_allocators_context_t* ctx = create_default_ctx();
+    bc_allocators_arena_t* arena = NULL;
+    assert_true(bc_allocators_arena_create_growable(ctx, 4096, 0, &arena));
+
+    void* first_ptr = NULL;
+    assert_true(bc_allocators_arena_allocate(arena, 2048, 1, &first_ptr));
+    void* large_ptr = NULL;
+    assert_true(bc_allocators_arena_allocate(arena, 32 * 1024, 8, &large_ptr));
+    assert_non_null(large_ptr);
+
+    *(char*)first_ptr = 'A';
+    assert_int_equal(*(char*)first_ptr, 'A');
+
+    bc_allocators_arena_stats_t stats;
+    assert_true(bc_allocators_arena_get_stats(arena, &stats));
+    assert_true(stats.chunk_count >= 2u);
+
+    bc_allocators_arena_destroy(arena);
+    bc_allocators_context_destroy(ctx);
+}
+
+static void test_bc_allocators_arena_growable_pointers_stable(void** state)
+{
+    (void)state;
+    bc_allocators_context_t* ctx = create_default_ctx();
+    bc_allocators_arena_t* arena = NULL;
+    assert_true(bc_allocators_arena_create_growable(ctx, 4096, 0, &arena));
+
+    enum { N = 4096 };
+    char* pointers[N];
+    for (int i = 0; i < N; i++) {
+        char* p = NULL;
+        assert_true(bc_allocators_arena_allocate(arena, 128, 8, (void**)&p));
+        p[0] = (char)(i & 0x7F);
+        pointers[i] = p;
+    }
+    for (int i = 0; i < N; i++) {
+        assert_int_equal(pointers[i][0], (char)(i & 0x7F));
+    }
+
+    bc_allocators_arena_destroy(arena);
+    bc_allocators_context_destroy(ctx);
+}
+
+static void test_bc_allocators_arena_growable_reset_drops_extra_chunks(void** state)
+{
+    (void)state;
+    bc_allocators_context_t* ctx = create_default_ctx();
+    bc_allocators_arena_t* arena = NULL;
+    assert_true(bc_allocators_arena_create_growable(ctx, 4096, 0, &arena));
+
+    for (int i = 0; i < 1024; i++) {
+        void* p = NULL;
+        assert_true(bc_allocators_arena_allocate(arena, 128, 1, &p));
+    }
+    bc_allocators_arena_stats_t before;
+    assert_true(bc_allocators_arena_get_stats(arena, &before));
+    assert_true(before.chunk_count >= 2u);
+
+    assert_true(bc_allocators_arena_reset(arena));
+    bc_allocators_arena_stats_t after;
+    assert_true(bc_allocators_arena_get_stats(arena, &after));
+    assert_int_equal(after.chunk_count, 1u);
+    assert_int_equal(after.used, 0u);
+
+    void* p = NULL;
+    assert_true(bc_allocators_arena_allocate(arena, 128, 1, &p));
+
+    bc_allocators_arena_destroy(arena);
+    bc_allocators_context_destroy(ctx);
+}
+
+static void test_bc_allocators_arena_fixed_allocate_rejects_overflow(void** state)
+{
+    (void)state;
+    bc_allocators_context_t* ctx = create_default_ctx();
+    bc_allocators_arena_t* arena = NULL;
+    assert_true(bc_allocators_arena_create(ctx, 4096, &arena));
+
+    void* small_ptr = NULL;
+    assert_true(bc_allocators_arena_allocate(arena, 3000, 1, &small_ptr));
+    void* over = NULL;
+    assert_false(bc_allocators_arena_allocate(arena, 10 * 1024, 1, &over));
+    assert_null(over);
+
+    bc_allocators_arena_destroy(arena);
+    bc_allocators_context_destroy(ctx);
+}
+
 /* ===== main ===== */
 
 int main(void)
@@ -516,6 +610,10 @@ int main(void)
     const struct CMUnitTest tests[] = {
         /* happy path */
         cmocka_unit_test(test_bc_allocators_arena_create_basic),
+        cmocka_unit_test(test_bc_allocators_arena_growable_exceeds_initial),
+        cmocka_unit_test(test_bc_allocators_arena_growable_pointers_stable),
+        cmocka_unit_test(test_bc_allocators_arena_growable_reset_drops_extra_chunks),
+        cmocka_unit_test(test_bc_allocators_arena_fixed_allocate_rejects_overflow),
         cmocka_unit_test(test_bc_allocators_arena_allocate_align_1),
         cmocka_unit_test(test_bc_allocators_arena_allocate_align_8),
         cmocka_unit_test(test_bc_allocators_arena_allocate_align_16),

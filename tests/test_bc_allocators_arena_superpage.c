@@ -199,7 +199,9 @@ static void test_arena_create_peak_tracking(void** state)
     bc_allocators_stats_t ctx_stats = {0};
     assert_true(bc_allocators_context_get_stats(ctx, &ctx_stats));
 
-    assert_true(ctx_stats.peak_mapped_bytes >= arena->total_mmap_size);
+    bc_allocators_arena_stats_t arena_stats;
+    assert_true(bc_allocators_arena_get_stats(arena, &arena_stats));
+    assert_true(ctx_stats.peak_mapped_bytes >= arena_stats.total_reserved);
 
     bc_allocators_arena_destroy(arena);
     bc_allocators_context_destroy(ctx);

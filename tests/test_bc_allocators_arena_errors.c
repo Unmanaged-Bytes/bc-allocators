@@ -359,7 +359,9 @@ static void test_bc_allocators_arena_internal_struct_access(void** state)
     assert_non_null(arena);
 
     assert_ptr_equal(arena->ctx, ctx);
-    assert_true(arena->capacity > 0);
+    bc_allocators_arena_stats_t stats;
+    assert_true(bc_allocators_arena_get_stats(arena, &stats));
+    assert_true(stats.capacity > 0);
 
     bc_allocators_arena_destroy(arena);
     bc_allocators_context_destroy(ctx);
