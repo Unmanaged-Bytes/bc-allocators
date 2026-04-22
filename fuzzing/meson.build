@@ -1,9 +1,22 @@
-fuzz_bc_allocators_pool = executable('fuzz_bc_allocators_pool',
-    'fuzz_bc_allocators_pool.c',
-    dependencies : [bc_allocators_dep, bc_core_dep],
-)
+# SPDX-License-Identifier: MIT
 
-fuzz_bc_allocators_arena = executable('fuzz_bc_allocators_arena',
-    'fuzz_bc_allocators_arena.c',
-    dependencies : [bc_allocators_dep, bc_core_dep],
-)
+fuzzer_c_args = []
+fuzzer_link_args = []
+if cc.get_id() == 'clang'
+    fuzzer_c_args += ['-fsanitize=fuzzer', '-DBC_FUZZ_LIBFUZZER']
+    fuzzer_link_args += ['-fsanitize=fuzzer']
+endif
+
+fuzz_targets = [
+    'bc_allocators_pool',
+    'bc_allocators_arena',
+]
+
+foreach name : fuzz_targets
+    executable('fuzz_' + name,
+        'fuzz_' + name + '.c',
+        dependencies : [bc_allocators_dep, bc_core_dep],
+        c_args : fuzzer_c_args,
+        link_args : fuzzer_link_args,
+    )
+endforeach
