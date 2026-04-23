@@ -237,6 +237,27 @@ static void test_bc_allocators_pool_stats_counters_plain_type(void** state)
     bc_allocators_context_destroy(ctx);
 }
 
+/* ===== size not on class boundary: alloc+free must balance to zero ===== */
+
+static void test_bc_allocators_pool_stats_active_bytes_non_class_size(void** state)
+{
+    (void)state;
+    bc_allocators_context_t* ctx = create_tracking_ctx();
+
+    for (int iteration = 0; iteration < 50; iteration++) {
+        void* ptr = NULL;
+        assert_true(bc_allocators_pool_allocate(ctx, 20, &ptr));
+        assert_non_null(ptr);
+        bc_allocators_pool_free(ctx, ptr);
+    }
+
+    bc_allocators_stats_t stats = {0};
+    assert_true(bc_allocators_context_get_stats(ctx, &stats));
+    assert_int_equal(stats.pool_active_bytes, 0);
+
+    bc_allocators_context_destroy(ctx);
+}
+
 /* ===== main ===== */
 
 int main(void)
@@ -246,6 +267,7 @@ int main(void)
         cmocka_unit_test(test_bc_allocators_pool_stats_free_count),
         cmocka_unit_test(test_bc_allocators_pool_stats_active_bytes),
         cmocka_unit_test(test_bc_allocators_pool_stats_active_bytes_multiple),
+        cmocka_unit_test(test_bc_allocators_pool_stats_active_bytes_non_class_size),
         cmocka_unit_test(test_bc_allocators_pool_stats_alloc_free_balanced),
         cmocka_unit_test(test_bc_allocators_pool_stats_arena_destroy_gt_create),
         cmocka_unit_test(test_bc_allocators_pool_stats_counters_plain_type),

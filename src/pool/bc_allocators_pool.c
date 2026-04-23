@@ -220,11 +220,12 @@ __attribute__((flatten, hot)) bool bc_allocators_pool_allocate(bc_allocators_con
     }
 
     int cls = original_class;
+    size_t class_size = bc_allocators_class_sizes[cls];
 
     void* block = free_list_pop(&ctx->pools[cls]);
     if (__builtin_expect(block != NULL, 1)) {
         *out_ptr = block;
-        track_alloc(ctx, size);
+        track_alloc(ctx, class_size);
         return true;
     }
 
@@ -234,7 +235,7 @@ __attribute__((flatten, hot)) bool bc_allocators_pool_allocate(bc_allocators_con
     }
 
     *out_ptr = block;
-    track_alloc(ctx, size);
+    track_alloc(ctx, class_size);
     return true;
 }
 
