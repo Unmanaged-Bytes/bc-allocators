@@ -178,6 +178,20 @@ test_bc_allocators_slab = executable('test_bc_allocators_slab',
 )
 test('bc_allocators_slab', test_bc_allocators_slab)
 
+# === Aligned + huge page tests ===
+
+test_bc_allocators_aligned_allocate = executable('test_bc_allocators_aligned_allocate',
+    'test_bc_allocators_aligned_allocate.c',
+    dependencies : [cmocka_dep, bc_allocators_dep],
+)
+test('bc_allocators_aligned_allocate', test_bc_allocators_aligned_allocate)
+
+test_bc_allocators_huge_page_allocate = executable('test_bc_allocators_huge_page_allocate',
+    'test_bc_allocators_huge_page_allocate.c',
+    dependencies : [cmocka_dep, bc_allocators_dep, bc_core_dep],
+)
+test('bc_allocators_huge_page_allocate', test_bc_allocators_huge_page_allocate)
+
 test_bc_allocators_slab_errors = executable('test_bc_allocators_slab_errors',
     'test_bc_allocators_slab_errors.c',
     slab_dir + '/bc_allocators_slab.c',
