@@ -48,8 +48,8 @@ static void bc_allocators_arena_release_block(bc_allocators_context_t* ctx, void
     }
 }
 
-static bool bc_allocators_arena_make_first(bc_allocators_context_t* ctx, size_t capacity, size_t initial_chunk_size,
-                                           size_t max_chunk_size, bool growable, bc_allocators_arena_t** out_arena)
+static bool bc_allocators_arena_make_first(bc_allocators_context_t* ctx, size_t capacity, size_t initial_chunk_size, size_t max_chunk_size,
+                                           bool growable, bc_allocators_arena_t** out_arena)
 {
     *out_arena = NULL;
 
