@@ -53,7 +53,8 @@ bool bc_allocators_compute_alloc_size(const bc_allocators_context_t* ctx, size_t
    Allocated memory must be released via bc_allocators_aligned_free.
    Backed by posix_memalign; ctx is currently unused but reserved for future
    tracking via the context. */
-static inline bool bc_allocators_aligned_allocate(bc_allocators_context_t* ctx, size_t size, size_t alignment, void** out_ptr)
+static inline __attribute__((unused)) bool bc_allocators_aligned_allocate(bc_allocators_context_t* ctx, size_t size, size_t alignment,
+                                                                          void** out_ptr)
 {
     (void)ctx;
     *out_ptr = NULL;
@@ -74,7 +75,7 @@ static inline bool bc_allocators_aligned_allocate(bc_allocators_context_t* ctx, 
     return true;
 }
 
-static inline void bc_allocators_aligned_free(bc_allocators_context_t* ctx, void* ptr)
+static inline __attribute__((unused)) void bc_allocators_aligned_free(bc_allocators_context_t* ctx, void* ptr)
 {
     (void)ctx;
     free(ptr);
@@ -87,7 +88,7 @@ static inline void bc_allocators_aligned_free(bc_allocators_context_t* ctx, void
    Caller must release via bc_allocators_huge_page_free with the same size.
    Recommended threshold: BC_BUFFER_HUGE_PAGE_THRESHOLD (2 MiB). Below this,
    prefer bc_allocators_aligned_allocate. */
-static inline bool bc_allocators_huge_page_allocate(size_t size, void** out_ptr)
+static inline __attribute__((unused)) bool bc_allocators_huge_page_allocate(size_t size, void** out_ptr)
 {
     *out_ptr = NULL;
     if (size == 0) {
@@ -111,7 +112,7 @@ static inline bool bc_allocators_huge_page_allocate(size_t size, void** out_ptr)
     return true;
 }
 
-static inline void bc_allocators_huge_page_free(void* ptr, size_t size)
+static inline __attribute__((unused)) void bc_allocators_huge_page_free(void* ptr, size_t size)
 {
     (void)munmap(ptr, size);
 }
