@@ -5,6 +5,8 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdlib.h>
+#include <sys/mman.h>
 
 typedef struct bc_allocators_context bc_allocators_context_t;
 
@@ -44,5 +46,74 @@ bool bc_allocators_context_get_stats(const bc_allocators_context_t* ctx, bc_allo
 /* ===== Safe arithmetic ===== */
 
 bool bc_allocators_compute_alloc_size(const bc_allocators_context_t* ctx, size_t element_size, size_t count, size_t* out_size);
+
+/* ===== Aligned allocation ===== */
+
+/* Aligned allocation. alignment must be power-of-two and >= sizeof(void*).
+   Allocated memory must be released via bc_allocators_aligned_free.
+   Backed by posix_memalign; ctx is currently unused but reserved for future
+   tracking via the context. */
+static inline bool bc_allocators_aligned_allocate(bc_allocators_context_t* ctx, size_t size, size_t alignment, void** out_ptr)
+{
+    (void)ctx;
+    *out_ptr = NULL;
+    if (size == 0) {
+        return false;
+    }
+    if (alignment < sizeof(void*)) {
+        return false;
+    }
+    if ((alignment & (alignment - 1)) != 0) {
+        return false;
+    }
+    void* ptr = NULL;
+    if (posix_memalign(&ptr, alignment, size) != 0) {
+        return false;
+    }
+    *out_ptr = ptr;
+    return true;
+}
+
+static inline void bc_allocators_aligned_free(bc_allocators_context_t* ctx, void* ptr)
+{
+    (void)ctx;
+    free(ptr);
+}
+
+/* Huge page allocation (2 MiB Linux x86-64). Tries MAP_HUGETLB first
+   (requires sysctl vm.nr_hugepages pre-configured), falls back to mmap +
+   madvise(MADV_HUGEPAGE) if MAP_HUGETLB returns ENOMEM. Returns false on
+   complete failure.
+   Caller must release via bc_allocators_huge_page_free with the same size.
+   Recommended threshold: BC_BUFFER_HUGE_PAGE_THRESHOLD (2 MiB). Below this,
+   prefer bc_allocators_aligned_allocate. */
+static inline bool bc_allocators_huge_page_allocate(size_t size, void** out_ptr)
+{
+    *out_ptr = NULL;
+    if (size == 0) {
+        return false;
+    }
+#ifdef MAP_HUGETLB
+    void* mapped = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
+    if (mapped != MAP_FAILED) {
+        *out_ptr = mapped;
+        return true;
+    }
+#endif
+    void* fallback = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (fallback == MAP_FAILED) {
+        return false;
+    }
+#ifdef MADV_HUGEPAGE
+    (void)madvise(fallback, size, MADV_HUGEPAGE);
+#endif
+    *out_ptr = fallback;
+    return true;
+}
+
+static inline void bc_allocators_huge_page_free(void* ptr, size_t size)
+{
+    (void)munmap(ptr, size);
+}
 
 #endif /* BC_ALLOCATORS_CONTEXT_H */
