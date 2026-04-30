@@ -66,7 +66,6 @@ pkg.generate(
 
 install_headers(
   'include/public/bc_allocators.h',
-  'include/public/bc_allocators_aligned.h',
   'include/public/bc_allocators_context.h',
   'include/public/bc_allocators_pool.h',
   'include/public/bc_allocators_arena.h',
