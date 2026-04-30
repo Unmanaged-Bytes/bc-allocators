@@ -2,6 +2,7 @@
 
 #include "bc_allocators_slab.h"
 
+#include "bc_allocators_free_list_internal.h"
 #include "bc_allocators_slab_internal.h"
 
 #include "bc_allocators_pool.h"
@@ -27,14 +28,11 @@ static bool allocate_new_page(bc_allocators_slab_t* slab)
     slab->pages = page;
     slab->slab_count++;
 
-    void* first_slot = objects_ptr;
-    *(void**)first_slot = slab->free_list_head;
-    slab->free_list_head = first_slot;
+    bc_allocators_free_list_push(&slab->free_list_head, objects_ptr);
 
     for (size_t slot_index = 1; slot_index < slab->objects_per_slab; slot_index++) {
         void* slot = (unsigned char*)objects_ptr + slot_index * slab->object_size;
-        *(void**)slot = slab->free_list_head;
-        slab->free_list_head = slot;
+        bc_allocators_free_list_push(&slab->free_list_head, slot);
     }
 
     return true;
@@ -97,16 +95,14 @@ bool bc_allocators_slab_allocate(bc_allocators_slab_t* slab, void** out_ptr)
         }
     }
 
-    *out_ptr = slab->free_list_head;
-    slab->free_list_head = *(void**)slab->free_list_head;
+    *out_ptr = bc_allocators_free_list_pop(&slab->free_list_head);
     slab->used_objects++;
     return true;
 }
 
 void bc_allocators_slab_free(bc_allocators_slab_t* slab, void* ptr)
 {
-    *(void**)ptr = slab->free_list_head;
-    slab->free_list_head = ptr;
+    bc_allocators_free_list_push(&slab->free_list_head, ptr);
     slab->used_objects--;
 }
 
