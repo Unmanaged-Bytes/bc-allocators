@@ -93,7 +93,7 @@ bool bc_allocators_context_create(const bc_allocators_context_config_t* config, 
     bc_core_fill(page_class_mem, page_class_size, 0xFF);
 
     ctx->page_size = page_size;
-    ctx->page_shift = (size_t)__builtin_ctzl((unsigned long)page_size);
+    ctx->page_shift = (size_t)bc_core_ctz_u64((uint64_t)page_size);
     ctx->cache_line_size = cache_line_size;
     ctx->context_mmap_size = context_alloc_size;
 

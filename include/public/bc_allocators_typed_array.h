@@ -109,9 +109,7 @@
             return false;                                                                                                                  \
         }                                                                                                                                  \
         if (arr->length > 0) {                                                                                                             \
-            /* Copy only valid elements. sizeof(element_type) is compile-time       */                                                     \
-            /* constant here — the compiler emits an optimized loop or rep movs.    */                                                     \
-            __builtin_memcpy(new_data, arr->data, arr->length * sizeof(element_type));                                                     \
+            bc_core_memcpy(new_data, arr->data, arr->length * sizeof(element_type));                                                       \
         }                                                                                                                                  \
         bc_allocators_pool_free(mem, arr->data); /* no-op if NULL */                                                                       \
         arr->data = new_data;                                                                                                              \
@@ -121,9 +119,7 @@
                                                                                                                                            \
     static inline __attribute__((unused)) bool prefix##_push(bc_allocators_context_t* mem, prefix##_t* arr, element_type value)            \
     {                                                                                                                                      \
-        /* HOT PATH: direct assignment — compiler emits 1-2 stores for small   */                                                          \
-        /* structs; no bc_core_copy, no function pointer, no AVX2 dispatch.  */                                                            \
-        if (__builtin_expect(arr->length < arr->capacity, 1)) {                                                                            \
+        if (BC_CORE_LIKELY(arr->length < arr->capacity)) {                                                                                 \
             arr->data[arr->length++] = value;                                                                                              \
             return true;                                                                                                                   \
         }                                                                                                                                  \
@@ -155,7 +151,7 @@
                 return false;                                                                                                              \
             }                                                                                                                              \
         }                                                                                                                                  \
-        __builtin_memcpy(arr->data + arr->length, src, count * sizeof(element_type));                                                      \
+        bc_core_memcpy(arr->data + arr->length, src, count * sizeof(element_type));                                                        \
         arr->length = required;                                                                                                            \
         return true;                                                                                                                       \
     }

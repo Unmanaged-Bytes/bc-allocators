@@ -30,13 +30,13 @@ static int size_class_for_size(size_t size)
     if (size <= 16) {
         return 0;
     }
-    int bits = 64 - __builtin_clzl(size - 1);
+    int bits = 64 - bc_core_clz_u64((uint64_t)(size - 1));
     return bits - 4;
 }
 
 static inline void free_list_push(bc_allocators_free_list_t* fl, void* ptr)
 {
-    if (__builtin_expect(fl->mag_count < BC_ALLOCATORS_MAG_SIZE, 1)) {
+    if (BC_CORE_LIKELY(fl->mag_count < BC_ALLOCATORS_MAG_SIZE)) {
         fl->mag[fl->mag_count++] = ptr;
         return;
     }
@@ -47,12 +47,12 @@ static inline void free_list_push(bc_allocators_free_list_t* fl, void* ptr)
 
 static inline void* free_list_pop(bc_allocators_free_list_t* fl)
 {
-    if (__builtin_expect(fl->mag_count > 0, 1)) {
+    if (BC_CORE_LIKELY(fl->mag_count > 0)) {
         return fl->mag[--fl->mag_count];
     }
 
     void* head = fl->head;
-    if (__builtin_expect(head != NULL, 1)) {
+    if (BC_CORE_LIKELY(head != NULL)) {
         fl->head = *(void**)head;
     }
     return head;
@@ -223,7 +223,7 @@ __attribute__((flatten, hot)) bool bc_allocators_pool_allocate(bc_allocators_con
     size_t class_size = bc_allocators_class_sizes[cls];
 
     void* block = free_list_pop(&ctx->pools[cls]);
-    if (__builtin_expect(block != NULL, 1)) {
+    if (BC_CORE_LIKELY(block != NULL)) {
         *out_ptr = block;
         track_alloc(ctx, class_size);
         return true;
