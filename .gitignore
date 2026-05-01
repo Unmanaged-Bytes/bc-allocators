@@ -42,3 +42,9 @@ debian/tmp/
 # Release artefact staging
 dist/
 deps/
+
+# Session docs (per bc-tool-template.md)
+STUDY*.md
+docs/STUDY*.md
+PLAN*.md
+docs/PLAN*.md
