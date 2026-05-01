@@ -5,6 +5,8 @@
 ![Language: C11](https://img.shields.io/badge/language-C11-informational)
 ![Platform: Linux](https://img.shields.io/badge/platform-Linux-lightgrey)
 
+Memory allocators for the `bc-*` ecosystem: pool, arena, slab, a context object threading leak callbacks and stats, plus a growable typed-array primitive.
+
 > **Scope.** Personal project, part of the `bc-*` ecosystem used by
 > [`bc-hash`](https://github.com/Unmanaged-Bytes/bc-hash) and sibling
 > libraries. Published here for transparency and reuse, not as a
