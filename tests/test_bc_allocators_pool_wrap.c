@@ -9,6 +9,7 @@
 #include "bc_allocators.h"
 #include "bc_allocators_pool.h"
 #include "bc_core.h"
+#include "bc_core_test_wrap.h"
 
 #include "bc_allocators_context_internal.h"
 
@@ -17,39 +18,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* ===== Wrap: bc_core_align_up (count-based) ===== */
+BC_TEST_WRAP_FAIL_ON_CALL(bc_core_align_up, bool, false,
+                          (size_t value, size_t alignment, size_t* out_result),
+                          (value, alignment, out_result))
 
-static int align_up_call_count = 0;
-static int align_up_fail_on_call = 0;
+BC_TEST_WRAP_FAIL_ON_CALL(bc_core_safe_add, bool, false,
+                          (size_t a, size_t b, size_t* out_result),
+                          (a, b, out_result))
 
-bool __real_bc_core_align_up(size_t value, size_t alignment, size_t* out_result);
-
-bool __wrap_bc_core_align_up(size_t value, size_t alignment, size_t* out_result)
-{
-    align_up_call_count++;
-    if (align_up_fail_on_call > 0 && align_up_call_count == align_up_fail_on_call) {
-        return false;
-    }
-    return __real_bc_core_align_up(value, alignment, out_result);
-}
-
-/* ===== Wrap: bc_core_safe_add (count-based) ===== */
-
-static int safe_add_call_count = 0;
-static int safe_add_fail_on_call = 0;
-
-bool __real_bc_core_safe_add(size_t a, size_t b, size_t* out_result);
-
-bool __wrap_bc_core_safe_add(size_t a, size_t b, size_t* out_result)
-{
-    safe_add_call_count++;
-    if (safe_add_fail_on_call > 0 && safe_add_call_count == safe_add_fail_on_call) {
-        return false;
-    }
-    return __real_bc_core_safe_add(a, b, out_result);
-}
-
-/* ===== Wrap: madvise (for MADV_FREE fallback coverage) ===== */
+/* ===== Wrap: madvise (libc multiplexed by advice — kept manual) ===== */
 
 static bool madvise_should_fail_free = false;
 
@@ -67,10 +44,8 @@ int __wrap_madvise(void* addr, size_t length, int advice)
 
 static void reset_wraps(void)
 {
-    align_up_call_count = 0;
-    align_up_fail_on_call = 0;
-    safe_add_call_count = 0;
-    safe_add_fail_on_call = 0;
+    BC_TEST_WRAP_RESET_FAIL_ON_CALL(bc_core_align_up);
+    BC_TEST_WRAP_RESET_FAIL_ON_CALL(bc_core_safe_add);
     madvise_should_fail_free = false;
 }
 
@@ -92,7 +67,7 @@ static void test_bc_allocators_context_create_page_class_align_up_failure(void**
     reset_wraps();
     /* Call 1: align_up(max_memory) — must succeed.
        Call 2: align_up(num_pages) — force failure (line 70-71 in bc_allocators.c). */
-    align_up_fail_on_call = 2;
+    bc_core_align_up_fail_on_call = 2;
 
     bc_allocators_context_t* ctx = NULL;
     assert_false(bc_allocators_context_create(NULL, &ctx));
@@ -110,7 +85,7 @@ static void test_bc_allocators_context_create_context_align_up_failure(void** st
     /* Call 1: align_up(max_memory) — must succeed.
        Call 2: align_up(num_pages) — must succeed.
        Call 3: align_up(sizeof context) — force failure (line 75-76 in bc_allocators.c). */
-    align_up_fail_on_call = 3;
+    bc_core_align_up_fail_on_call = 3;
 
     bc_allocators_context_t* ctx = NULL;
     assert_false(bc_allocators_context_create(NULL, &ctx));
@@ -132,8 +107,8 @@ static void test_bc_allocators_pool_allocate_large_safe_add_overflow(void** stat
     assert_non_null(warmup);
 
     /* Record safe_add calls so far, then fail the next one (in allocate_large) */
-    int count_after_warmup = safe_add_call_count;
-    safe_add_fail_on_call = count_after_warmup + 1;
+    int count_after_warmup = bc_core_safe_add_call_count;
+    bc_core_safe_add_fail_on_call = count_after_warmup + 1;
 
     /* Try large allocation (beyond max class size) */
     void* ptr = NULL;
@@ -151,8 +126,8 @@ static void test_bc_allocators_pool_allocate_large_align_up_overflow(void** stat
     bc_allocators_context_t* ctx = create_ctx();
 
     /* Record align_up calls after context creation, then fail the next one */
-    int count_after_ctx = align_up_call_count;
-    align_up_fail_on_call = count_after_ctx + 1;
+    int count_after_ctx = bc_core_align_up_call_count;
+    bc_core_align_up_fail_on_call = count_after_ctx + 1;
 
     /* Try large allocation */
     void* ptr = NULL;
@@ -171,8 +146,8 @@ static void test_bc_allocators_pool_bump_allocate_align_up_overflow(void** state
     /* Size 65537 maps to class 14 (262144) directly (no promotion after header removal).
        262144 >= page_size so align_up is called in bump_allocate_class.
        Record current align_up count, then fail the next one. */
-    int count_after_ctx = align_up_call_count;
-    align_up_fail_on_call = count_after_ctx + 1;
+    int count_after_ctx = bc_core_align_up_call_count;
+    bc_core_align_up_fail_on_call = count_after_ctx + 1;
 
     /* After header removal: size 65537 -> class=14 (262144). No actual_class promotion.
        262144 >= page_size so align_up is called in bump_allocate_class.
@@ -199,8 +174,8 @@ static void test_bc_allocators_pool_reallocate_large_safe_add_overflow(void** st
     bc_core_fill(ptr, 64, (unsigned char)0xAB);
 
     /* Record safe_add calls, then fail the next one in reallocate_large */
-    int count_now = safe_add_call_count;
-    safe_add_fail_on_call = count_now + 1;
+    int count_now = bc_core_safe_add_call_count;
+    bc_core_safe_add_fail_on_call = count_now + 1;
 
     /* Try to reallocate to a bigger large block */
     void* new_ptr = NULL;
@@ -230,8 +205,8 @@ static void test_bc_allocators_pool_reallocate_large_align_up_overflow(void** st
     bc_core_fill(ptr, 64, (unsigned char)0xCD);
 
     /* Record align_up calls, then fail the next one in reallocate path */
-    int count_now = align_up_call_count;
-    align_up_fail_on_call = count_now + 1;
+    int count_now = bc_core_align_up_call_count;
+    bc_core_align_up_fail_on_call = count_now + 1;
 
     /* Try to reallocate to a bigger large block */
     void* new_ptr = NULL;

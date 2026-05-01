@@ -8,11 +8,12 @@
 
 #include "bc_allocators.h"
 #include "bc_allocators_platform_internal.h"
+#include "bc_core_test_wrap.h"
 
 #include <stdbool.h>
 #include <stdint.h>
 
-/* ===== Wrap: bc_allocators_platform_map ===== */
+/* ===== Wrap: bc_allocators_platform_map (NULL-set out_pointer divergent — kept manual) ===== */
 
 static int map_call_count = 0;
 static int map_fail_on_call = 0;
@@ -31,33 +32,11 @@ bool __wrap_bc_allocators_platform_map(size_t size, void** out_pointer)
     return __real_bc_allocators_platform_map(size, out_pointer);
 }
 
-/* ===== Wrap: bc_allocators_platform_get_page_size ===== */
+BC_TEST_WRAP_SHOULD_FAIL(bc_allocators_platform_get_page_size, bool, false,
+                         (size_t* out_page_size), (out_page_size))
 
-static bool page_size_should_fail = false;
-
-bool __real_bc_allocators_platform_get_page_size(size_t* out_page_size);
-
-bool __wrap_bc_allocators_platform_get_page_size(size_t* out_page_size)
-{
-    if (page_size_should_fail) {
-        return false;
-    }
-    return __real_bc_allocators_platform_get_page_size(out_page_size);
-}
-
-/* ===== Wrap: bc_allocators_platform_get_cache_line_size ===== */
-
-static bool cache_line_should_fail = false;
-
-bool __real_bc_allocators_platform_get_cache_line_size(size_t* out);
-
-bool __wrap_bc_allocators_platform_get_cache_line_size(size_t* out)
-{
-    if (cache_line_should_fail) {
-        return false;
-    }
-    return __real_bc_allocators_platform_get_cache_line_size(out);
-}
+BC_TEST_WRAP_SHOULD_FAIL(bc_allocators_platform_get_cache_line_size, bool, false,
+                         (size_t* out), (out))
 
 /* ===== Reset helpers ===== */
 
@@ -65,8 +44,8 @@ static void reset_wraps(void)
 {
     map_call_count = 0;
     map_fail_on_call = 0;
-    page_size_should_fail = false;
-    cache_line_should_fail = false;
+    BC_TEST_WRAP_RESET_SHOULD_FAIL(bc_allocators_platform_get_page_size);
+    BC_TEST_WRAP_RESET_SHOULD_FAIL(bc_allocators_platform_get_cache_line_size);
 }
 
 /* ===== Test: mmap fail on context alloc (1st map call) ===== */
@@ -114,7 +93,7 @@ static void test_bc_allocators_context_create_page_size_fail(void** state)
 {
     (void)state;
     reset_wraps();
-    page_size_should_fail = true;
+    mock_bc_allocators_platform_get_page_size_should_fail = true;
 
     bc_allocators_context_t* ctx = NULL;
     assert_false(bc_allocators_context_create(NULL, &ctx));
@@ -169,7 +148,7 @@ static void test_bc_allocators_context_create_cache_line_fallback(void** state)
 {
     (void)state;
     reset_wraps();
-    cache_line_should_fail = true;
+    mock_bc_allocators_platform_get_cache_line_size_should_fail = true;
 
     bc_allocators_context_t* ctx = NULL;
     assert_true(bc_allocators_context_create(NULL, &ctx));
