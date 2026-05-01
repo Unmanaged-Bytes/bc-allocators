@@ -46,7 +46,7 @@ bool bc_allocators_arena_allocate(bc_allocators_arena_t* arena, size_t size, siz
 bool bc_allocators_arena_copy_string(bc_allocators_arena_t* arena, const char* source, const char** out_copy);
 bool bc_allocators_arena_reset(bc_allocators_arena_t* arena);
 bool bc_allocators_arena_reset_secure(bc_allocators_arena_t* arena);
-bool bc_allocators_arena_release_pages(bc_allocators_arena_t* arena);
+bool bc_allocators_arena_release_pages(const bc_allocators_arena_t* arena);
 bool bc_allocators_arena_get_stats(const bc_allocators_arena_t* arena, bc_allocators_arena_stats_t* out_stats);
 
 #endif /* BC_ALLOCATORS_ARENA_H */

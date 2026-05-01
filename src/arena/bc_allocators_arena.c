@@ -299,7 +299,7 @@ bool bc_allocators_arena_reset_secure(bc_allocators_arena_t* arena)
     return bc_allocators_arena_reset(arena);
 }
 
-bool bc_allocators_arena_release_pages(bc_allocators_arena_t* arena)
+bool bc_allocators_arena_release_pages(const bc_allocators_arena_t* arena)
 {
     bc_allocators_arena_chunk_t* chunk = arena->first_chunk;
     while (chunk != NULL) {

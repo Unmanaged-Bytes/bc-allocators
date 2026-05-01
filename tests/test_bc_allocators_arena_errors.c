@@ -9,6 +9,7 @@
 #include "bc_allocators.h"
 #include "bc_allocators_arena.h"
 #include "bc_core.h"
+#include "bc_core_test_wrap.h"
 
 #include "bc_allocators_arena_internal.h"
 #include "bc_allocators_platform_internal.h"
@@ -16,17 +17,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* ===== Wrap: bc_allocators_platform_map ===== */
-
-static int map_call_count = 0;
-static int map_fail_on_call = 0;
+static int bc_allocators_platform_map_call_count = 0;
+static int bc_allocators_platform_map_fail_on_call = 0;
 
 bool __real_bc_allocators_platform_map(size_t size, void** out_pointer);
 
 bool __wrap_bc_allocators_platform_map(size_t size, void** out_pointer)
 {
-    map_call_count++;
-    if (map_fail_on_call > 0 && map_call_count == map_fail_on_call) {
+    bc_allocators_platform_map_call_count++;
+    if (bc_allocators_platform_map_fail_on_call > 0
+        && bc_allocators_platform_map_call_count == bc_allocators_platform_map_fail_on_call) {
         if (out_pointer != NULL) {
             *out_pointer = NULL;
         }
@@ -35,58 +35,20 @@ bool __wrap_bc_allocators_platform_map(size_t size, void** out_pointer)
     return __real_bc_allocators_platform_map(size, out_pointer);
 }
 
-/* ===== Wrap: bc_core_align_up ===== */
+BC_TEST_WRAP_FAIL_ON_CALL(bc_core_align_up, bool, false,
+                          (size_t value, size_t alignment, size_t* out_result),
+                          (value, alignment, out_result))
 
-static int align_up_call_count = 0;
-static int align_up_fail_on_call = 0;
-static int align_up_fail_from_call = 0;
-
-bool __real_bc_core_align_up(size_t value, size_t alignment, size_t* out_result);
-
-bool __wrap_bc_core_align_up(size_t value, size_t alignment, size_t* out_result)
-{
-    align_up_call_count++;
-    if (align_up_fail_on_call > 0 && align_up_call_count == align_up_fail_on_call) {
-        return false;
-    }
-    if (align_up_fail_from_call > 0 && align_up_call_count >= align_up_fail_from_call) {
-        return false;
-    }
-    return __real_bc_core_align_up(value, alignment, out_result);
-}
-
-/* ===== Wrap: bc_core_safe_add ===== */
-
-static int safe_add_call_count = 0;
-static int safe_add_fail_on_call = 0;
-static int safe_add_fail_from_call = 0;
-
-bool __real_bc_core_safe_add(size_t a, size_t b, size_t* out_result);
-
-bool __wrap_bc_core_safe_add(size_t a, size_t b, size_t* out_result)
-{
-    safe_add_call_count++;
-    if (safe_add_fail_on_call > 0 && safe_add_call_count == safe_add_fail_on_call) {
-        return false;
-    }
-    if (safe_add_fail_from_call > 0 && safe_add_call_count >= safe_add_fail_from_call) {
-        return false;
-    }
-    return __real_bc_core_safe_add(a, b, out_result);
-}
-
-/* ===== Reset helpers ===== */
+BC_TEST_WRAP_FAIL_ON_CALL(bc_core_safe_add, bool, false,
+                          (size_t a, size_t b, size_t* out_result),
+                          (a, b, out_result))
 
 static void reset_wraps(void)
 {
-    map_call_count = 0;
-    map_fail_on_call = 0;
-    align_up_call_count = 0;
-    align_up_fail_on_call = 0;
-    align_up_fail_from_call = 0;
-    safe_add_call_count = 0;
-    safe_add_fail_on_call = 0;
-    safe_add_fail_from_call = 0;
+    bc_allocators_platform_map_call_count = 0;
+    bc_allocators_platform_map_fail_on_call = 0;
+    BC_TEST_WRAP_RESET_FAIL_ON_CALL(bc_core_align_up);
+    BC_TEST_WRAP_RESET_FAIL_ON_CALL(bc_core_safe_add);
 }
 
 /* ===== Helper: create a context (counts map calls during context_create) ===== */
@@ -98,7 +60,7 @@ static bc_allocators_context_t* create_ctx_and_record_map_calls(int* out_map_cal
     bool ok = bc_allocators_context_create(NULL, &ctx);
     assert_true(ok);
     assert_non_null(ctx);
-    *out_map_calls_for_ctx = map_call_count;
+    *out_map_calls_for_ctx = bc_allocators_platform_map_call_count;
     return ctx;
 }
 
@@ -110,7 +72,7 @@ static void test_bc_allocators_arena_create_map_fail(void** state)
     int ctx_map_calls = 0;
     bc_allocators_context_t* ctx = create_ctx_and_record_map_calls(&ctx_map_calls);
 
-    map_fail_on_call = ctx_map_calls + 1;
+    bc_allocators_platform_map_fail_on_call = ctx_map_calls + 1;
 
     bc_allocators_arena_t* arena = NULL;
     assert_false(bc_allocators_arena_create(ctx, 4096, &arena));
@@ -131,12 +93,12 @@ static void test_bc_allocators_arena_allocate_align_up_overflow(void** state)
     assert_true(bc_allocators_arena_create(ctx, 4096, &arena));
     assert_non_null(arena);
 
-    align_up_fail_from_call = align_up_call_count + 1;
+    bc_core_align_up_fail_from_call = bc_core_align_up_call_count + 1;
 
     void* ptr = NULL;
     assert_false(bc_allocators_arena_allocate(arena, 64, 8, &ptr));
 
-    align_up_fail_from_call = 0;
+    bc_core_align_up_fail_from_call = 0;
     bc_allocators_arena_destroy(arena);
     bc_allocators_context_destroy(ctx);
 }
@@ -258,13 +220,13 @@ static void test_bc_allocators_arena_create_safe_add_overflow(void** state)
     assert_true(bc_allocators_context_create(NULL, &ctx));
     assert_non_null(ctx);
 
-    safe_add_fail_on_call = safe_add_call_count + 1;
+    bc_core_safe_add_fail_on_call = bc_core_safe_add_call_count + 1;
 
     bc_allocators_arena_t* arena = NULL;
     assert_false(bc_allocators_arena_create(ctx, 4096, &arena));
     assert_null(arena);
 
-    safe_add_fail_on_call = 0;
+    bc_core_safe_add_fail_on_call = 0;
     bc_allocators_context_destroy(ctx);
 }
 
@@ -279,13 +241,13 @@ static void test_bc_allocators_arena_create_align_up_page(void** state)
     assert_true(bc_allocators_context_create(NULL, &ctx));
     assert_non_null(ctx);
 
-    align_up_fail_on_call = align_up_call_count + 1;
+    bc_core_align_up_fail_on_call = bc_core_align_up_call_count + 1;
 
     bc_allocators_arena_t* arena = NULL;
     assert_false(bc_allocators_arena_create(ctx, 4096, &arena));
     assert_null(arena);
 
-    align_up_fail_on_call = 0;
+    bc_core_align_up_fail_on_call = 0;
     bc_allocators_context_destroy(ctx);
 }
 
@@ -304,12 +266,12 @@ static void test_bc_allocators_arena_allocate_safe_add_overflow(void** state)
     assert_true(bc_allocators_arena_create(ctx, 4096, &arena));
     assert_non_null(arena);
 
-    safe_add_fail_from_call = safe_add_call_count + 1;
+    bc_core_safe_add_fail_from_call = bc_core_safe_add_call_count + 1;
 
     void* ptr = NULL;
     assert_false(bc_allocators_arena_allocate(arena, 64, 8, &ptr));
 
-    safe_add_fail_from_call = 0;
+    bc_core_safe_add_fail_from_call = 0;
     bc_allocators_arena_destroy(arena);
     bc_allocators_context_destroy(ctx);
 }
@@ -333,12 +295,12 @@ static void test_bc_allocators_arena_copy_string_alloc_fail(void** state)
     assert_true(bc_allocators_arena_allocate(arena, 64, 1, &ptr));
     assert_non_null(ptr);
 
-    safe_add_fail_from_call = safe_add_call_count + 1;
+    bc_core_safe_add_fail_from_call = bc_core_safe_add_call_count + 1;
 
     const char* copy = NULL;
     assert_false(bc_allocators_arena_copy_string(arena, "hello", &copy));
 
-    safe_add_fail_from_call = 0;
+    bc_core_safe_add_fail_from_call = 0;
     bc_allocators_arena_destroy(arena);
     bc_allocators_context_destroy(ctx);
 }
