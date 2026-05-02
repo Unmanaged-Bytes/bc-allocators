@@ -105,13 +105,15 @@
             return false;                                                                                                                  \
         }                                                                                                                                  \
         element_type* new_data = NULL;                                                                                                     \
-        if (!bc_allocators_pool_allocate(mem, new_size, (void**)&new_data)) {                                                              \
-            return false;                                                                                                                  \
+        if (arr->data == NULL) {                                                                                                           \
+            if (!bc_allocators_pool_allocate(mem, new_size, (void**)&new_data)) {                                                          \
+                return false;                                                                                                              \
+            }                                                                                                                              \
+        } else {                                                                                                                           \
+            if (!bc_allocators_pool_reallocate(mem, arr->data, new_size, (void**)&new_data)) {                                             \
+                return false;                                                                                                              \
+            }                                                                                                                              \
         }                                                                                                                                  \
-        if (arr->length > 0) {                                                                                                             \
-            bc_core_memcpy(new_data, arr->data, arr->length * sizeof(element_type));                                                       \
-        }                                                                                                                                  \
-        bc_allocators_pool_free(mem, arr->data); /* no-op if NULL */                                                                       \
         arr->data = new_data;                                                                                                              \
         arr->capacity = new_cap;                                                                                                           \
         return true;                                                                                                                       \
